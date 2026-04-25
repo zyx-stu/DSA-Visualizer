@@ -1,0 +1,21 @@
+.home { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+.subtitle { color: #6b7280; margin-bottom: 1.5rem; }
+.search-bar {
+  width: 100%; padding: 0.75rem 1rem;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 1rem; margin-bottom: 1.5rem; outline: none;
+}
+.search-bar:focus { border-color: #6366f1; }
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem; margin-top: 1.5rem;
+}
+.category-filter { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.filter-btn {
+  padding: 0.4rem 1rem; border-radius: 999px;
+  border: 1.5px solid #e5e7eb; background: white;
+  cursor: pointer; font-size: 0.875rem; transition: all 0.2s;
+}
+.filter-btn.active, .filter-btn:hover { background: #6366f1; color: white; border-color: #6366f1; }

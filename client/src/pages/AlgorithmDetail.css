@@ -1,0 +1,26 @@
+.detail-page { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; }
+.back-btn { color: #6366f1; text-decoration: none; font-size: 0.9rem; }
+.detail-header { margin: 1.5rem 0; }
+.category-tag {
+  background: #eef2ff; color: #6366f1;
+  padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem;
+}
+.detail-header h1 { font-size: 2rem; margin: 0.75rem 0 0.25rem; }
+.difficulty { font-weight: 600; font-size: 1rem; }
+.description { color: #374151; line-height: 1.7; margin: 1.5rem 0; }
+.complexity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.complexity-card {
+  background: #f9fafb; border: 1.5px solid #e5e7eb;
+  border-radius: 12px; padding: 1rem 1.25rem;
+}
+.complexity-card .label { display: block; color: #6b7280; font-size: 0.85rem; }
+.complexity-card .value { font-size: 1.25rem; font-weight: 700; font-family: monospace; }
+.tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+.tag { background: #f3f4f6; color: #374151; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; }
+.visualize-btn {
+  margin-top: 2rem; width: 100%; padding: 1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white; border: none; border-radius: 12px;
+  font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+}
+.visualize-btn:hover { opacity: 0.9; }
