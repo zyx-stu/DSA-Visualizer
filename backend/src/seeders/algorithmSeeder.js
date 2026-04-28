@@ -555,13 +555,30 @@ function fib(n) {
 const seedDatabase = async () => {
   try {
     await connectDB();
+
+    // Drop existing data AND the slug index so null slugs from
+    // previous failed runs don't block this one
     await Algorithm.deleteMany({});
     console.log('🗑️  Cleared existing algorithms');
 
-    const inserted = await Algorithm.insertMany(sampleAlgorithms);
-    console.log(`✅ Inserted ${inserted.length} algorithms`);
-    inserted.forEach(a => console.log(`   • ${a.name} [${a.category}] — slug: ${a.slug}`));
+    // Drop slug index to avoid conflicts from prior bad seeds
+    try {
+      await Algorithm.collection.dropIndex('slug_1');
+      console.log('🔧 Dropped stale slug index');
+    } catch (_) {
+      // Index may not exist yet — that's fine
+    }
 
+    // Use create() instead of insertMany() so pre-save hooks fire
+    // (pre-save hook generates the slug from the name)
+    const results = [];
+    for (const data of sampleAlgorithms) {
+      const doc = await Algorithm.create(data);
+      results.push(doc);
+      console.log(`   ✅ ${doc.name} — slug: "${doc.slug}"`);
+    }
+
+    console.log(`\n✅ Inserted ${results.length} algorithms`);
     console.log('\n🎉 Seeding complete!\n');
     process.exit(0);
   } catch (error) {
@@ -571,3 +588,4 @@ const seedDatabase = async () => {
 };
 
 seedDatabase();
+
