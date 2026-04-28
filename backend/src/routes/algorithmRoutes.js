@@ -21,8 +21,7 @@ router.get('/search', algorithmController.searchAlgorithms);
 // GET /api/algorithms/:slug - Get single algorithm
 router.get('/:slug', algorithmController.getAlgorithmBySlug);
 
-// POST /api/algorithms/:slug/view - Increment views
-router.post('/:slug/view', algorithmController.incrementViews);
+// Views are auto-incremented inside getAlgorithmBySlug (no separate endpoint needed)
 
 // POST /api/algorithms/:slug/like - Toggle like
 router.post('/:slug/like', algorithmController.toggleLike);
