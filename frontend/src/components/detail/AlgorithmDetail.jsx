@@ -1,214 +1,257 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiCopy, FiExternalLink, FiHeart, FiClock, FiDatabase } from 'react-icons/fi';
-import toast from 'react-hot-toast';
+import {
+  FiX, FiHeart, FiExternalLink, FiClock,
+  FiCpu, FiTag, FiChevronRight,
+} from 'react-icons/fi';
 import CodeBlock from './CodeBlock';
-import VisualizationLinks from './VisualizationLinks';
 import ComplexityBadge from './ComplexityBadge';
-import Loader from '../common/Loader';
+import VisualizationLinks from './VisualizationLinks';
 import { algorithmAPI } from '../../services/api';
+import { DIFFICULTY_COLORS } from '../../utils/constants';
+import Loader from '../common/Loader';
+import toast from 'react-hot-toast';
 
-const AlgorithmDetail = ({ algorithm, onClose, loading }) => {
-  const [selectedLanguage, setSelectedLanguage] = useState(
-    algorithm?.codeSnippets?.[0]?.language || 'python'
-  );
+const AlgorithmDetail = ({ algorithm: initialAlgorithm, onClose, loading }) => {
+  const [algorithm, setAlgorithm] = useState(initialAlgorithm);
   const [liked, setLiked] = useState(false);
+  const [activeSection, setActiveSection] = useState('overview');
 
-  const handleCopy = async (code) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      toast.success('Code copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to copy code');
+  useEffect(() => {
+    // If only partial data, fetch full detail by slug
+    if (initialAlgorithm?.slug && !initialAlgorithm?.codeSnippets?.length) {
+      algorithmAPI.getBySlug(initialAlgorithm.slug)
+        .then((res) => setAlgorithm(res.data?.algorithm || res.data))
+        .catch(console.error);
+    } else {
+      setAlgorithm(initialAlgorithm);
     }
-  };
+  }, [initialAlgorithm]);
+
+  // Prevent background scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, []);
 
   const handleLike = async () => {
     if (liked) return;
     try {
-      await algorithmAPI.like(algorithm._id);
       setLiked(true);
-      toast.success('Liked!');
-    } catch (error) {
+      setAlgorithm((prev) => ({
+        ...prev,
+        analytics: { ...prev.analytics, likes: (prev.analytics?.likes || 0) + 1 },
+      }));
+      await algorithmAPI.like(algorithm.slug);
+      toast.success('Liked! ❤️');
+    } catch {
+      setLiked(false);
       toast.error('Failed to like');
     }
   };
 
-  const selectedCode = algorithm?.codeSnippets?.find(
-    (snippet) => snippet.language === selectedLanguage
-  );
+  const diff = algorithm?.difficulty;
+  const diffColors = DIFFICULTY_COLORS[diff] || DIFFICULTY_COLORS.easy;
 
-  if (loading) {
-    return (
+  const sections = ['overview', 'code', 'complexity', 'visualizations'];
+
+  return (
+    <>
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-dark-950/95 backdrop-blur-sm z-50 flex items-center justify-center"
+        onClick={onClose}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+      />
+
+      {/* Modal panel */}
+      <motion.div
+        initial={{ opacity: 0, x: '100%' }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        className="fixed top-0 right-0 bottom-0 w-full max-w-2xl bg-dark-900 border-l border-dark-800 z-50 flex flex-col overflow-hidden shadow-2xl"
+        id="algorithm-detail-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${algorithm?.name} details`}
       >
-        <Loader />
-      </motion.div>
-    );
-  }
-
-  if (!algorithm) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-dark-950/95 backdrop-blur-sm z-50 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div className="min-h-screen py-10 px-4">
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
-          className="max-w-5xl mx-auto bg-dark-900 border border-dark-800 rounded-2xl shadow-2xl"
-        >
-          {/* Header */}
-          <div className="p-8 border-b border-dark-800">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h2 className="text-3xl font-bold mb-3">{algorithm.name}</h2>
-                <div className="flex flex-wrap gap-3">
-                  <span className="badge bg-dark-800 text-gray-300 border border-dark-700">
-                    {algorithm.category}
-                  </span>
-                  <ComplexityBadge difficulty={algorithm.difficulty} />
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-dark-800 rounded-lg transition-colors"
-              >
-                <FiX size={24} />
-              </button>
-            </div>
-
-            <p className="text-gray-300 text-lg leading-relaxed">
-              {algorithm.description?.detailed}
-            </p>
+        {loading || !algorithm ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader text="Loading algorithm..." />
           </div>
-
-          {/* Complexity Info */}
-          <div className="p-8 border-b border-dark-800 bg-dark-800/30">
-            <h3 className="text-xl font-semibold mb-4">Complexity Analysis</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-dark-900 rounded-lg p-4 border border-dark-700">
-                <div className="flex items-center gap-2 text-primary-500 mb-2">
-                  <FiClock />
-                  <span className="font-semibold">Time Complexity</span>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p className="text-gray-400">
-                    Best: <span className="text-white">{algorithm.complexity?.time?.best}</span>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="p-6 border-b border-dark-800 shrink-0">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-gray-500 text-xs capitalize">
+                      {algorithm.category?.replace('-', ' ')}
+                    </span>
+                    <FiChevronRight className="text-dark-600" size={12} />
+                    <span className={`text-xs font-semibold capitalize ${diffColors.text}`}>
+                      {algorithm.difficulty}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-100 truncate">{algorithm.name}</h2>
+                  <p className="text-gray-500 text-sm mt-1.5 line-clamp-2">
+                    {algorithm.description?.short}
                   </p>
-                  <p className="text-gray-400">
-                    Average: <span className="text-white">{algorithm.complexity?.time?.average}</span>
-                  </p>
-                  <p className="text-gray-400">
-                    Worst: <span className="text-white">{algorithm.complexity?.time?.worst}</span>
-                  </p>
                 </div>
-              </div>
-
-              <div className="bg-dark-900 rounded-lg p-4 border border-dark-700">
-                <div className="flex items-center gap-2 text-primary-500 mb-2">
-                  <FiDatabase />
-                  <span className="font-semibold">Space Complexity</span>
-                </div>
-                <p className="text-white text-2xl font-mono">
-                  {algorithm.complexity?.space}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Code Implementation */}
-          <div className="p-8 border-b border-dark-800">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold">Implementation</h3>
-              <div className="flex gap-2">
-                {algorithm.codeSnippets?.map((snippet) => (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    key={snippet.language}
-                    onClick={() => setSelectedLanguage(snippet.language)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      selectedLanguage === snippet.language
+                    onClick={handleLike}
+                    disabled={liked}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                      liked
+                        ? 'text-red-400 bg-red-500/10 cursor-default'
+                        : 'text-gray-400 hover:text-red-400 hover:bg-red-500/10 bg-dark-800'
+                    }`}
+                    aria-label="Like algorithm"
+                    id="detail-like-btn"
+                  >
+                    <FiHeart size={14} className={liked ? 'fill-current' : ''} />
+                    {algorithm.analytics?.likes || 0}
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="p-2 text-gray-400 hover:text-gray-100 hover:bg-dark-800 rounded-lg transition-all"
+                    aria-label="Close panel"
+                    id="detail-close-btn"
+                  >
+                    <FiX size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Section nav */}
+              <div className="flex gap-1 mt-5 overflow-x-auto">
+                {sections.map((s) => (
+                  <button
+                    key={s}
+                    id={`detail-section-${s}`}
+                    onClick={() => setActiveSection(s)}
+                    className={`px-4 py-2 rounded-lg text-sm capitalize whitespace-nowrap transition-all duration-200 ${
+                      activeSection === s
                         ? 'bg-primary-600 text-white'
-                        : 'bg-dark-800 text-gray-400 hover:bg-dark-700'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-dark-800'
                     }`}
                   >
-                    {snippet.language.toUpperCase()}
+                    {s === 'complexity' ? 'Complexity' : s.charAt(0).toUpperCase() + s.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
 
-            {selectedCode && (
-              <div className="relative">
-                <button
-                  onClick={() => handleCopy(selectedCode.code)}
-                  className="absolute top-4 right-4 p-2 bg-dark-700 hover:bg-dark-600 rounded-lg transition-colors z-10"
-                  title="Copy code"
-                >
-                  <FiCopy />
-                </button>
-                <CodeBlock code={selectedCode.code} language={selectedLanguage} />
-              </div>
-            )}
-          </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
 
-          {/* Visualizations */}
-          {algorithm.visualizations && algorithm.visualizations.length > 0 && (
-            <div className="p-8 border-b border-dark-800">
-              <h3 className="text-xl font-semibold mb-4">
-                Interactive Visualizations
-              </h3>
-              <VisualizationLinks visualizations={algorithm.visualizations} />
-            </div>
-          )}
+              {/* OVERVIEW */}
+              {activeSection === 'overview' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-gray-300 font-semibold mb-3">Description</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      {algorithm.description?.detailed || algorithm.description?.short}
+                    </p>
+                  </div>
 
-          {/* Use Cases */}
-          {algorithm.useCases && algorithm.useCases.length > 0 && (
-            <div className="p-8 border-b border-dark-800">
-              <h3 className="text-xl font-semibold mb-4">Use Cases</h3>
-              <ul className="space-y-2">
-                {algorithm.useCases.map((useCase, index) => (
-                  <li key={index} className="flex items-start gap-2 text-gray-300">
-                    <span className="text-primary-500 mt-1">•</span>
-                    {useCase}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                  {algorithm.prerequisites?.length > 0 && (
+                    <div>
+                      <h3 className="text-gray-300 font-semibold mb-3">Prerequisites</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {algorithm.prerequisites.map((p) => (
+                          <span key={p} className="badge bg-dark-800 text-gray-400 border border-dark-700">
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-          {/* Footer */}
-          <div className="p-8 flex items-center justify-between">
-            <div className="flex gap-6 text-gray-400">
-              <span className="flex items-center gap-2">
-                <FiEye />
-                {algorithm.analytics?.views || 0} views
-              </span>
-              <button
-                onClick={handleLike}
-                className={`flex items-center gap-2 transition-colors ${
-                  liked ? 'text-red-500' : 'hover:text-red-500'
-                }`}
-              >
-                <FiHeart className={liked ? 'fill-current' : ''} />
-                {(algorithm.analytics?.likes || 0) + (liked ? 1 : 0)}
-              </button>
+                  {algorithm.useCases?.length > 0 && (
+                    <div>
+                      <h3 className="text-gray-300 font-semibold mb-3">Use Cases</h3>
+                      <ul className="space-y-2">
+                        {algorithm.useCases.map((uc) => (
+                          <li key={uc} className="flex items-start gap-2 text-gray-400 text-sm">
+                            <span className="text-primary-400 mt-0.5">•</span>
+                            {uc}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {algorithm.tags?.length > 0 && (
+                    <div>
+                      <h3 className="text-gray-300 font-semibold mb-3 flex items-center gap-2">
+                        <FiTag size={14} /> Tags
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {algorithm.tags.map((tag) => (
+                          <span key={tag} className="badge bg-dark-800 text-primary-400 border border-primary-500/20 text-xs">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CODE */}
+              {activeSection === 'code' && (
+                <CodeBlock codeSnippets={algorithm.codeSnippets || []} />
+              )}
+
+              {/* COMPLEXITY */}
+              {activeSection === 'complexity' && algorithm.complexity && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-gray-300 font-semibold mb-4 flex items-center gap-2">
+                      <FiClock size={14} /> Time Complexity
+                    </h3>
+                    <div className="space-y-3">
+                      {algorithm.complexity.time?.best && (
+                        <ComplexityBadge label="Best" value={algorithm.complexity.time.best} />
+                      )}
+                      {algorithm.complexity.time?.average && (
+                        <ComplexityBadge label="Average" value={algorithm.complexity.time.average} />
+                      )}
+                      {algorithm.complexity.time?.worst && (
+                        <ComplexityBadge label="Worst" value={algorithm.complexity.time.worst} />
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-gray-300 font-semibold mb-4 flex items-center gap-2">
+                      <FiCpu size={14} /> Space Complexity
+                    </h3>
+                    <ComplexityBadge label="Space" value={algorithm.complexity.space} />
+                  </div>
+                </div>
+              )}
+
+              {/* VISUALIZATIONS */}
+              {activeSection === 'visualizations' && (
+                <div>
+                  <h3 className="text-gray-300 font-semibold mb-4 flex items-center gap-2">
+                    <FiExternalLink size={14} /> Interactive Visualizations
+                  </h3>
+                  <VisualizationLinks visualizations={algorithm.visualizations} />
+                </div>
+              )}
             </div>
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
+          </>
+        )}
+      </motion.div>
+    </>
   );
 };
 

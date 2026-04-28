@@ -1,22 +1,33 @@
 import React from 'react';
-import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 const SearchBar = ({ value, onChange }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative"
+      className="relative w-full max-w-2xl"
     >
-      <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
+      <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none" />
       <input
+        id="algorithm-search"
         type="text"
-        placeholder="Search algorithms..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="input pl-12 w-full"
+        placeholder="Search algorithms by name, category, or tag..."
+        className="input pl-12 pr-10"
+        autoComplete="off"
       />
+      {value && (
+        <button
+          onClick={() => onChange('')}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+          aria-label="Clear search"
+        >
+          <FiX />
+        </button>
+      )}
     </motion.div>
   );
 };

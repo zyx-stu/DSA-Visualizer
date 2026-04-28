@@ -3,6 +3,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 
 /**
  * Get all algorithms with filtering, search, and pagination
+ * GET /api/algorithms?category=sorting&difficulty=easy&search=bubble&page=1&limit=12
  */
 const getAllAlgorithms = async (req, res) => {
   try {
@@ -12,65 +13,67 @@ const getAllAlgorithms = async (req, res) => {
       search,
       page = 1,
       limit = 12,
-      sort = '-views'
+      sort = 'createdAt',
     } = req.query;
 
-    // Build filter object
-    const filter = {};
-    
-    if (category && category !== 'All') {
-      filter.category = category;
-    }
-    
-    if (difficulty && difficulty !== 'All') {
-      filter.difficulty = difficulty;
-    }
-    
-    if (search) {
+    const filter = { isActive: true };
+
+    if (category && category !== 'all') filter.category = category;
+    if (difficulty && difficulty !== 'all') filter.difficulty = difficulty;
+
+    if (search && search.trim().length >= 2) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { 'description.short': { $regex: search.trim(), $options: 'i' } },
+        { tags: { $regex: search.trim(), $options: 'i' } },
       ];
     }
 
-    // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortMap = {
+      popular: { 'analytics.views': -1 },
+      newest:  { createdAt: -1 },
+      name:    { name: 1 },
+      createdAt: { createdAt: -1 },
+    };
+    const sortQuery = sortMap[sort] || { createdAt: -1 };
 
-    // Execute query with pagination
-    const algorithms = await Algorithm.find(filter)
-      .select('-__v')
-      .sort(sort)
-      .limit(parseInt(limit))
-      .skip(skip)
-      .lean();
-
-    // Get total count for pagination
-    const total = await Algorithm.countDocuments(filter);
+    const [algorithms, total] = await Promise.all([
+      Algorithm.find(filter)
+        .select('-__v -codeSnippets -visualizations')
+        .sort(sortQuery)
+        .limit(parseInt(limit))
+        .skip(skip)
+        .lean(),
+      Algorithm.countDocuments(filter),
+    ]);
 
     return successResponse(res, {
       algorithms,
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / parseInt(limit)),
-        totalItems: total,
-        itemsPerPage: parseInt(limit)
-      }
+        currentPage:  parseInt(page),
+        totalPages:   Math.ceil(total / parseInt(limit)),
+        totalItems:   total,
+        itemsPerPage: parseInt(limit),
+        hasNext:      parseInt(page) < Math.ceil(total / parseInt(limit)),
+        hasPrev:      parseInt(page) > 1,
+      },
     });
-
   } catch (error) {
-    console.error('Error in getAllAlgorithms:', error);
+    console.error('getAllAlgorithms error:', error);
     return errorResponse(res, 'Failed to fetch algorithms', 500);
   }
 };
 
 /**
- * Get single algorithm by slug
+ * Get single algorithm by slug (full detail including code)
+ * GET /api/algorithms/:slug
  */
 const getAlgorithmBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const algorithm = await Algorithm.findOne({ slug })
+    const algorithm = await Algorithm.findOne({ slug, isActive: true })
       .select('-__v')
       .lean();
 
@@ -78,142 +81,108 @@ const getAlgorithmBySlug = async (req, res) => {
       return errorResponse(res, 'Algorithm not found', 404);
     }
 
-    return successResponse(res, algorithm);
+    // Increment view count asynchronously (fire-and-forget)
+    Algorithm.findOneAndUpdate(
+      { slug },
+      { $inc: { 'analytics.views': 1 } }
+    ).exec();
 
+    return successResponse(res, { algorithm });
   } catch (error) {
-    console.error('Error in getAlgorithmBySlug:', error);
+    console.error('getAlgorithmBySlug error:', error);
     return errorResponse(res, 'Failed to fetch algorithm', 500);
   }
 };
 
 /**
- * Increment algorithm views
- */
-const incrementViews = async (req, res) => {
-  try {
-    const { slug } = req.params;
-
-    const algorithm = await Algorithm.findOneAndUpdate(
-      { slug },
-      { $inc: { views: 1 } },
-      { new: true }
-    );
-
-    if (!algorithm) {
-      return errorResponse(res, 'Algorithm not found', 404);
-    }
-
-    return successResponse(res, { views: algorithm.views });
-
-  } catch (error) {
-    console.error('Error in incrementViews:', error);
-    return errorResponse(res, 'Failed to update views', 500);
-  }
-};
-
-/**
  * Toggle like on algorithm
+ * POST /api/algorithms/:slug/like
  */
 const toggleLike = async (req, res) => {
   try {
     const { slug } = req.params;
     const { increment = true } = req.body;
-
-    const updateValue = increment ? 1 : -1;
+    const delta = increment ? 1 : -1;
 
     const algorithm = await Algorithm.findOneAndUpdate(
       { slug },
-      { $inc: { likes: updateValue } },
-      { new: true }
+      { $inc: { 'analytics.likes': delta } },
+      { new: true, select: 'analytics.likes' }
     );
 
-    if (!algorithm) {
-      return errorResponse(res, 'Algorithm not found', 404);
-    }
+    if (!algorithm) return errorResponse(res, 'Algorithm not found', 404);
 
-    return successResponse(res, { likes: algorithm.likes });
-
+    return successResponse(res, { likes: algorithm.analytics.likes });
   } catch (error) {
-    console.error('Error in toggleLike:', error);
+    console.error('toggleLike error:', error);
     return errorResponse(res, 'Failed to update likes', 500);
   }
 };
 
 /**
- * Get algorithm statistics
+ * Get platform statistics
+ * GET /api/algorithms/stats
  */
 const getStats = async (req, res) => {
   try {
-    const stats = await Algorithm.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalAlgorithms: { $sum: 1 },
-          totalViews: { $sum: '$views' },
-          totalLikes: { $sum: '$likes' },
-          avgViews: { $avg: '$views' }
-        }
-      }
-    ]);
-
-    const categoryStats = await Algorithm.aggregate([
-      {
-        $group: {
-          _id: '$category',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const difficultyStats = await Algorithm.aggregate([
-      {
-        $group: {
-          _id: '$difficulty',
-          count: { $sum: 1 }
-        }
-      }
+    const [overall, byCategory, byDifficulty] = await Promise.all([
+      Algorithm.aggregate([
+        { $match: { isActive: true } },
+        {
+          $group: {
+            _id: null,
+            totalAlgorithms: { $sum: 1 },
+            totalViews: { $sum: '$analytics.views' },
+            totalLikes: { $sum: '$analytics.likes' },
+          },
+        },
+      ]),
+      Algorithm.aggregate([
+        { $match: { isActive: true } },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Algorithm.aggregate([
+        { $match: { isActive: true } },
+        { $group: { _id: '$difficulty', count: { $sum: 1 } } },
+      ]),
     ]);
 
     return successResponse(res, {
-      overall: stats[0] || {
-        totalAlgorithms: 0,
-        totalViews: 0,
-        totalLikes: 0,
-        avgViews: 0
-      },
-      byCategory: categoryStats,
-      byDifficulty: difficultyStats
+      overall: overall[0] || { totalAlgorithms: 0, totalViews: 0, totalLikes: 0 },
+      byCategory,
+      byDifficulty,
     });
-
   } catch (error) {
-    console.error('Error in getStats:', error);
+    console.error('getStats error:', error);
     return errorResponse(res, 'Failed to fetch statistics', 500);
   }
 };
 
 /**
  * Get popular algorithms
+ * GET /api/algorithms/popular?limit=6
  */
 const getPopular = async (req, res) => {
   try {
     const { limit = 6 } = req.query;
 
-    const algorithms = await Algorithm.find()
-      .select('name slug category difficulty views likes')
-      .sort('-views')
-      .limit(parseInt(limit))
+    const algorithms = await Algorithm.find({ isActive: true })
+      .select('name slug category difficulty analytics description.short tags')
+      .sort({ 'analytics.views': -1 })
+      .limit(Math.min(parseInt(limit), 20))
       .lean();
 
-    return successResponse(res, algorithms);
-
+    return successResponse(res, { algorithms });
   } catch (error) {
-    console.error('Error in getPopular:', error);
+    console.error('getPopular error:', error);
     return errorResponse(res, 'Failed to fetch popular algorithms', 500);
   }
 };
 
 /**
- * Search algorithms
+ * Search algorithms (autocomplete)
+ * GET /api/algorithms/search?q=bubble
  */
 const searchAlgorithms = async (req, res) => {
   try {
@@ -224,45 +193,50 @@ const searchAlgorithms = async (req, res) => {
     }
 
     const algorithms = await Algorithm.find({
+      isActive: true,
       $or: [
-        { name: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } },
-        { category: { $regex: q, $options: 'i' } }
-      ]
+        { name: { $regex: q.trim(), $options: 'i' } },
+        { 'description.short': { $regex: q.trim(), $options: 'i' } },
+        { tags: { $regex: q.trim(), $options: 'i' } },
+        { category: { $regex: q.trim(), $options: 'i' } },
+      ],
     })
       .select('name slug category difficulty')
       .limit(10)
       .lean();
 
-    return successResponse(res, algorithms);
-
+    return successResponse(res, { algorithms });
   } catch (error) {
-    console.error('Error in searchAlgorithms:', error);
+    console.error('searchAlgorithms error:', error);
     return errorResponse(res, 'Search failed', 500);
   }
 };
 
 /**
- * Get categories
+ * Get all distinct categories
+ * GET /api/algorithms/categories
  */
 const getCategories = async (req, res) => {
   try {
-    const categories = await Algorithm.distinct('category');
-    return successResponse(res, categories);
+    const categories = await Algorithm.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    return successResponse(res, { categories });
   } catch (error) {
-    console.error('Error in getCategories:', error);
+    console.error('getCategories error:', error);
     return errorResponse(res, 'Failed to fetch categories', 500);
   }
 };
 
-// Export all functions
 module.exports = {
   getAllAlgorithms,
   getAlgorithmBySlug,
-  incrementViews,
   toggleLike,
   getStats,
   getPopular,
   searchAlgorithms,
-  getCategories
+  getCategories,
 };

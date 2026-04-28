@@ -1,77 +1,95 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiClock, FiDatabase, FiEye, FiHeart } from 'react-icons/fi';
+import { FiArrowRight, FiEye, FiHeart } from 'react-icons/fi';
+import { DIFFICULTY_COLORS } from '../../utils/constants';
 
-const AlgorithmCard = ({ algorithm, index, onClick }) => {
-  const difficultyColors = {
-    easy: 'bg-green-500/10 text-green-500 border-green-500/20',
-    medium: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-    hard: 'bg-red-500/10 text-red-500 border-red-500/20',
-  };
+const CATEGORY_ICONS = {
+  sorting: '⚡',
+  searching: '🔍',
+  graph: '🕸️',
+  tree: '🌲',
+  'dynamic-programming': '🧩',
+  greedy: '💰',
+  backtracking: '🔄',
+  'divide-conquer': '✂️',
+  default: '📌',
+};
+
+const AlgorithmCard = ({ algorithm, onClick }) => {
+  const { name, category, difficulty, description, analytics, tags } = algorithm;
+  const diffColors = DIFFICULTY_COLORS[difficulty] || DIFFICULTY_COLORS.easy;
+  const categoryIcon = CATEGORY_ICONS[category] || CATEGORY_ICONS.default;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ y: -5 }}
-      onClick={onClick}
-      className="card cursor-pointer group"
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+      onClick={() => onClick(algorithm)}
+      className="card cursor-pointer group relative overflow-hidden border border-dark-800 hover:border-primary-500/40 transition-all duration-300"
+      id={`algorithm-card-${algorithm.slug}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onClick(algorithm)}
+      aria-label={`View ${name} algorithm`}
     >
-      {/* Header */}
+      {/* Top gradient line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-600 to-primary-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+      {/* Header row */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-xl font-bold mb-2 group-hover:text-primary-400 transition-colors">
-            {algorithm.name}
-          </h3>
-          <span className="badge bg-dark-800 text-gray-300 border border-dark-700">
-            {algorithm.category}
-          </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{categoryIcon}</span>
+          <span className="text-gray-500 text-xs capitalize">{category?.replace('-', ' ')}</span>
         </div>
-        <div className={`badge border ${difficultyColors[algorithm.difficulty]}`}>
-          {algorithm.difficulty}
-        </div>
+        <span
+          className={`badge ${diffColors.bg} ${diffColors.text} border ${diffColors.border} capitalize`}
+        >
+          {difficulty}
+        </span>
       </div>
 
-      {/* Description */}
-      <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-        {algorithm.description?.short || algorithm.description?.detailed}
+      {/* Name */}
+      <h3 className="text-gray-100 font-semibold text-lg mb-2 group-hover:text-primary-400 transition-colors duration-200">
+        {name}
+      </h3>
+
+      {/* Short description */}
+      <p className="text-gray-500 text-sm leading-relaxed mb-4 line-clamp-2">
+        {description?.short || ''}
       </p>
 
-      {/* Complexity */}
-      <div className="flex gap-4 mb-4 text-sm">
-        <div className="flex items-center gap-2 text-gray-400">
-          <FiClock className="text-primary-500" />
-          <span>Time: {algorithm.complexity?.time?.worst}</span>
-        </div>
-        <div className="flex items-center gap-2 text-gray-400">
-          <FiDatabase className="text-primary-500" />
-          <span>Space: {algorithm.complexity?.space}</span>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-4 border-t border-dark-800">
-        <div className="flex gap-4 text-sm text-gray-400">
-          <span className="flex items-center gap-1">
-            <FiEye size={16} />
-            {algorithm.analytics?.views || 0}
-          </span>
-          <span className="flex items-center gap-1">
-            <FiHeart size={16} />
-            {algorithm.analytics?.likes || 0}
-          </span>
-        </div>
-        <div className="flex gap-1">
-          {algorithm.codeSnippets?.slice(0, 3).map((snippet) => (
+      {/* Tags */}
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {tags.slice(0, 3).map((tag) => (
             <span
-              key={snippet.language}
-              className="px-2 py-1 bg-dark-800 rounded text-xs text-gray-400"
+              key={tag}
+              className="text-xs px-2 py-0.5 bg-dark-800 text-gray-500 rounded-md border border-dark-700"
             >
-              {snippet.language}
+              #{tag}
             </span>
           ))}
         </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-auto pt-4 border-t border-dark-800">
+        <div className="flex items-center gap-3 text-gray-600 text-xs">
+          <span className="flex items-center gap-1">
+            <FiEye size={11} />
+            {analytics?.views || 0}
+          </span>
+          <span className="flex items-center gap-1">
+            <FiHeart size={11} />
+            {analytics?.likes || 0}
+          </span>
+        </div>
+        <span className="text-primary-500 text-xs flex items-center gap-1 group-hover:gap-2 transition-all duration-200 font-medium">
+          View <FiArrowRight size={12} />
+        </span>
       </div>
     </motion.div>
   );

@@ -1,32 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiZap } from 'react-icons/fi';
 
-const Loader = ({ fullScreen = false }) => {
-  const containerClass = fullScreen
-    ? 'fixed inset-0 flex items-center justify-center bg-dark-950/80 backdrop-blur-sm z-50'
-    : 'flex items-center justify-center py-20';
+const Loader = ({ size = 'default', text = 'Loading...' }) => {
+  const sizes = {
+    small: 'w-6 h-6',
+    default: 'w-10 h-10',
+    large: 'w-16 h-16',
+  };
 
   return (
-    <div className={containerClass}>
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex gap-2">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-3 h-3 bg-primary-500 rounded-full"
-              animate={{
-                y: [0, -20, 0],
-              }}
-              transition={{
-                duration: 0.6,
-                repeat: Infinity,
-                delay: i * 0.15,
-              }}
-            />
-          ))}
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div className="relative">
+        <motion.div
+          className={`${sizes[size]} rounded-full border-2 border-primary-600/30`}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+        />
+        <motion.div
+          className={`absolute inset-0 ${sizes[size]} rounded-full border-t-2 border-primary-500`}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <FiZap className="text-primary-400 text-sm" />
         </div>
-        <p className="text-gray-400 text-sm">Loading...</p>
       </div>
+      {text && (
+        <motion.p
+          className="text-gray-500 text-sm"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          {text}
+        </motion.p>
+      )}
     </div>
   );
 };

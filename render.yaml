@@ -1,0 +1,26 @@
+# Render Deployment Configuration
+# This file tells Render how to build and run your backend service.
+
+services:
+  - type: web
+    name: dsa-visualizer-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false   # Set this manually in Render dashboard → Secret
+      - key: CORS_ORIGIN
+        sync: false   # Set to your Vercel frontend URL
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+    healthCheckPath: /health
+    autoDeploy: true
+    plan: free        # Change to "starter" or higher for production

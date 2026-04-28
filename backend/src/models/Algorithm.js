@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import slugify from 'slugify';
+const mongoose = require('mongoose');
+const slugify = require('slugify');
 
 const codeSnippetSchema = new mongoose.Schema({
   language: {
@@ -32,9 +32,9 @@ const visualizationSchema = new mongoose.Schema({
 
 const complexitySchema = new mongoose.Schema({
   time: {
-    best: { type: String, default: 'N/A' },
+    best:    { type: String, default: 'N/A' },
     average: { type: String, default: 'N/A' },
-    worst: { type: String, required: true },
+    worst:   { type: String, required: true },
   },
   space: {
     type: String,
@@ -59,25 +59,11 @@ const algorithmSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'sorting',
-      'searching',
-      'graph',
-      'tree',
-      'dynamic-programming',
-      'greedy',
-      'backtracking',
-      'divide-conquer',
-      'string',
-      'math',
-      'bit-manipulation',
-      'array',
-      'linked-list',
-      'stack',
-      'queue',
-      'heap',
-      'hashing',
-      'recursion',
-      'other'
+      'sorting', 'searching', 'graph', 'tree',
+      'dynamic-programming', 'greedy', 'backtracking',
+      'divide-conquer', 'string', 'math',
+      'bit-manipulation', 'array', 'linked-list',
+      'stack', 'queue', 'heap', 'hashing', 'recursion', 'other',
     ],
     index: true,
   },
@@ -88,15 +74,8 @@ const algorithmSchema = new mongoose.Schema({
     index: true,
   },
   description: {
-    short: {
-      type: String,
-      required: true,
-      maxLength: 200,
-    },
-    detailed: {
-      type: String,
-      required: true,
-    },
+    short:    { type: String, required: true, maxLength: 300 },
+    detailed: { type: String, required: true },
   },
   complexity: {
     type: complexitySchema,
@@ -105,89 +84,53 @@ const algorithmSchema = new mongoose.Schema({
   codeSnippets: {
     type: [codeSnippetSchema],
     validate: {
-      validator: function(v) {
-        return v && v.length > 0;
-      },
+      validator: (v) => v && v.length > 0,
       message: 'At least one code snippet is required',
     },
   },
-  visualizations: {
-    type: [visualizationSchema],
-    default: [],
-  },
-  tags: {
-    type: [String],
-    default: [],
-  },
-  prerequisites: {
-    type: [String],
-    default: [],
-  },
-  useCases: {
-    type: [String],
-    default: [],
-  },
+  visualizations: { type: [visualizationSchema], default: [] },
+  tags:           { type: [String], default: [] },
+  prerequisites:  { type: [String], default: [] },
+  useCases:       { type: [String], default: [] },
   analytics: {
-    views: {
-      type: Number,
-      default: 0,
-    },
-    likes: {
-      type: Number,
-      default: 0,
-    },
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
   },
-  isActive: {
-    type: Boolean,
-    default: true,
-    index: true,
-  },
+  isActive: { type: Boolean, default: true, index: true },
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
+  toJSON:   { virtuals: true },
   toObject: { virtuals: true },
 });
 
-// Indexes for performance
+// Compound + text indexes
 algorithmSchema.index({ name: 'text', 'description.short': 'text', tags: 'text' });
 algorithmSchema.index({ category: 1, difficulty: 1 });
+algorithmSchema.index({ 'analytics.views': -1 });
 algorithmSchema.index({ createdAt: -1 });
 
-// Pre-save hook to generate slug
-algorithmSchema.pre('save', function(next) {
+// Auto-generate slug on save
+algorithmSchema.pre('save', function (next) {
   if (this.isModified('name')) {
-    this.slug = slugify(this.name, {
-      lower: true,
-      strict: true,
-    });
+    this.slug = slugify(this.name, { lower: true, strict: true });
   }
   next();
 });
 
-// Virtual for difficulty color
-algorithmSchema.virtual('difficultyColor').get(function() {
-  const colors = {
-    easy: '#22c55e',
-    medium: '#f59e0b',
-    hard: '#ef4444',
-  };
-  return colors[this.difficulty];
+// Virtual: difficulty badge color
+algorithmSchema.virtual('difficultyColor').get(function () {
+  return { easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' }[this.difficulty];
 });
 
-// Instance method to increment views
-algorithmSchema.methods.incrementViews = async function() {
-  this.analytics.views += 1;
-  return this.save();
+// Static: popular algorithms
+algorithmSchema.statics.getPopular = function (limit = 10) {
+  return this.find({ isActive: true })
+    .sort({ 'analytics.views': -1 })
+    .limit(limit);
 };
 
-// Instance method to increment likes
-algorithmSchema.methods.incrementLikes = async function() {
-  this.analytics.likes += 1;
-  return this.save();
-};
-
-// Static method to get categories with counts
-algorithmSchema.statics.getCategoryCounts = async function() {
+// Static: category counts
+algorithmSchema.statics.getCategoryCounts = function () {
   return this.aggregate([
     { $match: { isActive: true } },
     { $group: { _id: '$category', count: { $sum: 1 } } },
@@ -195,13 +138,5 @@ algorithmSchema.statics.getCategoryCounts = async function() {
   ]);
 };
 
-// Static method to get popular algorithms
-algorithmSchema.statics.getPopular = async function(limit = 10) {
-  return this.find({ isActive: true })
-    .sort({ 'analytics.views': -1 })
-    .limit(limit);
-};
-
 const Algorithm = mongoose.model('Algorithm', algorithmSchema);
-
-export default Algorithm;
+module.exports = Algorithm;

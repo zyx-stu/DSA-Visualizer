@@ -1,34 +1,34 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const analyticsSchema = new mongoose.Schema({
-  algorithmId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Algorithm',
-    required: true,
-    index: true,
-  },
-  eventType: {
+  algorithmSlug: {
     type: String,
-    enum: ['view', 'like', 'copy_code', 'visit_visualization'],
     required: true,
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {},
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
     index: true,
+  },
+  event: {
+    type: String,
+    required: true,
+    enum: ['view', 'like', 'code_copy', 'visualization_click'],
+  },
+  language: {
+    type: String,
+    default: null,
+  },
+  userAgent: {
+    type: String,
+    default: null,
+  },
+  ip: {
+    type: String,
+    default: null,
   },
 }, {
   timestamps: true,
 });
 
-// Index for time-based queries
-analyticsSchema.index({ timestamp: -1 });
-analyticsSchema.index({ algorithmId: 1, eventType: 1 });
+analyticsSchema.index({ algorithmSlug: 1, event: 1 });
+analyticsSchema.index({ createdAt: -1 });
 
 const Analytics = mongoose.model('Analytics', analyticsSchema);
-
-export default Analytics;
+module.exports = Analytics;

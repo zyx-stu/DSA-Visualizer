@@ -1,22 +1,32 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import AlgorithmCard from './AlgorithmCard';
 
 const AlgorithmGrid = ({ algorithms, onAlgorithmClick }) => {
+  if (algorithms.length === 0) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-5xl mb-4">🔍</div>
+        <h3 className="text-gray-300 text-xl font-semibold mb-2">No algorithms found</h3>
+        <p className="text-gray-500 text-sm">Try adjusting your search or filters.</p>
+      </div>
+    );
+  }
+
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      layout
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
     >
-      {algorithms.map((algorithm, index) => (
-        <AlgorithmCard
-          key={algorithm._id}
-          algorithm={algorithm}
-          index={index}
-          onClick={() => onAlgorithmClick(algorithm)}
-        />
-      ))}
+      <AnimatePresence mode="popLayout">
+        {algorithms.map((algorithm) => (
+          <AlgorithmCard
+            key={algorithm._id || algorithm.slug}
+            algorithm={algorithm}
+            onClick={onAlgorithmClick}
+          />
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 };

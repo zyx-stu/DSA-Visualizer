@@ -1,34 +1,50 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { CATEGORIES } from '../../utils/constants';
+
+const ALL_TABS = ['all', ...CATEGORIES];
+
+const LABEL_MAP = {
+  all: 'All',
+  'sorting': 'Sorting',
+  'searching': 'Searching',
+  'graph': 'Graph',
+  'tree': 'Tree',
+  'dynamic-programming': 'DP',
+  'greedy': 'Greedy',
+  'backtracking': 'Backtracking',
+  'divide-conquer': 'Divide & Conquer',
+};
 
 const CategoryTabs = ({ selected, onChange }) => {
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'sorting', label: 'Sorting' },
-    { id: 'searching', label: 'Searching' },
-    { id: 'graph', label: 'Graph' },
-    { id: 'tree', label: 'Tree' },
-    { id: 'dynamic-programming', label: 'DP' },
-    { id: 'greedy', label: 'Greedy' },
-  ];
-
   return (
-    <div className="flex flex-wrap gap-2">
-      {categories.map((category) => (
-        <motion.button
-          key={category.id}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => onChange(category.id)}
-          className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-            selected === category.id
-              ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
-              : 'bg-dark-800 text-gray-300 hover:bg-dark-700'
-          }`}
-        >
-          {category.label}
-        </motion.button>
-      ))}
+    <div className="flex gap-2 flex-wrap" role="tablist" aria-label="Algorithm categories">
+      {ALL_TABS.map((tab) => {
+        const isActive = selected === tab;
+        return (
+          <button
+            key={tab}
+            id={`category-tab-${tab}`}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab)}
+            className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              isActive
+                ? 'text-white'
+                : 'text-gray-400 hover:text-gray-200 bg-dark-800 hover:bg-dark-700'
+            }`}
+          >
+            {isActive && (
+              <motion.span
+                layoutId="active-tab"
+                className="absolute inset-0 bg-primary-600 rounded-lg z-0"
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+            <span className="relative z-10">{LABEL_MAP[tab] || tab}</span>
+          </button>
+        );
+      })}
     </div>
   );
 };

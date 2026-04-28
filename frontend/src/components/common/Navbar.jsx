@@ -1,92 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiMenu, FiX, FiCode } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiCode, FiMenu, FiX, FiZap } from 'react-icons/fi';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
-  const navLinks = [
-    { path: '/', label: 'Home' },
-    { path: '/algorithms', label: 'Algorithms' },
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const links = [
+    { to: '/', label: 'Home' },
+    { to: '/algorithms', label: 'Algorithms' },
   ];
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-dark-800/50">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? 'bg-dark-950/90 backdrop-blur-xl border-b border-dark-800/60 shadow-xl' : 'bg-transparent'
+      }`}
+    >
       <div className="container-custom">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FiCode className="text-white text-xl" />
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center shadow-lg shadow-primary-500/30 group-hover:shadow-primary-500/50 transition-all duration-300">
+              <FiZap className="text-white text-sm" />
             </div>
-            <span className="text-xl font-bold gradient-text">
-              DSA Visualizer
+            <span className="text-lg font-bold">
+              <span className="gradient-text">DSA</span>
+              <span className="text-gray-200"> Visualizer</span>
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
+          {/* Desktop links */}
+          <div className="hidden md:flex items-center gap-6">
+            {links.map((link) => (
               <Link
-                key={link.path}
-                to={link.path}
-                className={`relative px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive(link.path)
-                    ? 'text-primary-400'
-                    : 'text-gray-300 hover:text-white'
+                key={link.to}
+                to={link.to}
+                className={`text-sm font-medium transition-colors duration-200 relative group ${
+                  isActive(link.to) ? 'text-primary-400' : 'text-gray-400 hover:text-gray-100'
                 }`}
               >
                 {link.label}
-                {isActive(link.path) && (
-                  <motion.div
-                    layoutId="navbar-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                )}
+                <span
+                  className={`absolute -bottom-1 left-0 h-0.5 bg-primary-500 transition-all duration-200 ${
+                    isActive(link.to) ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`}
+                />
               </Link>
             ))}
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-100 transition-colors duration-200"
+            >
+              <FiCode className="text-base" />
+              GitHub
+            </a>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile menu toggle */}
           <button
+            className="md:hidden text-gray-400 hover:text-white transition-colors"
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-dark-800 transition-colors"
+            aria-label="Toggle menu"
           >
-            {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+            {isOpen ? <FiX size={22} /> : <FiMenu size={22} />}
           </button>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
+      {/* Mobile menu */}
+      <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden pb-4"
+            className="md:hidden bg-dark-900/95 backdrop-blur-xl border-b border-dark-800"
           >
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setIsOpen(false)}
-                className={`block px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(link.path)
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-300 hover:bg-dark-800'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            <div className="container-custom py-4 flex flex-col gap-3">
+              {links.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setIsOpen(false)}
+                  className={`text-sm font-medium py-2 transition-colors ${
+                    isActive(link.to) ? 'text-primary-400' : 'text-gray-400 hover:text-gray-100'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </nav>
   );
 };
