@@ -1,21 +1,12 @@
-import dotenv from 'dotenv';
+require('dotenv').config();
 
-dotenv.config();
-
-export const config = {
-  env: process.env.NODE_ENV || 'development',
+const config = {
+  nodeEnv: process.env.NODE_ENV || 'development',
   port: process.env.PORT || 5000,
-  mongoUri: process.env.MONGODB_URI,
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-  rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/dsa_visualizer',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
 };
 
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI'];
-
-requiredEnvVars.forEach((varName) => {
-  if (!process.env[varName]) {
-    throw new Error(`❌ Missing required environment variable: ${varName}`);
-  }
-});
+module.exports = config;

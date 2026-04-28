@@ -1,26 +1,21 @@
-import express from 'express';
-import algorithmRoutes from './algorithmRoutes.js';
-
+const express = require('express');
 const router = express.Router();
+
+const algorithmRoutes = require('./algorithmRoutes');
+const analyticsRoutes = require('./analyticsRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
-  res.status(200).json({
+  res.json({
     status: 'success',
-    message: 'API is running',
+    message: 'DSA Visualizer API is running',
     timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
 });
 
-// API routes
+// Mount routes
 router.use('/algorithms', algorithmRoutes);
+router.use('/analytics', analyticsRoutes);
 
-// 404 handler
-router.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Route not found',
-  });
-});
-
-export default router;
+module.exports = router;

@@ -1,130 +1,65 @@
-import express from 'express';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import compression from 'compression';
-import cors from 'cors';
+const express = require('express');
+const { connectDB } = require('./config/database');
+const { corsMiddleware } = require('./middleware/cors');
+const { errorHandler } = require('./middleware/errorHandler');
+const { rateLimiter } = require('./middleware/rateLimiter');
+const routes = require('./routes');
+require('dotenv').config();
 
-// Config & DB
-import connectDB from './config/database.js';
-import { config } from './config/env.js';
-
-// Middleware
-import corsMiddleware from './middleware/cors.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
-import errorHandler from './middleware/errorHandler.js';
-
-// Routes
-import routes from './routes/index.js';
-
-// Services (FIX: no dynamic await import)
-import { linearSearch, binarySearch, jumpSearch } from './services/searchService.js';
-
-// Utils
-import logger, { loggerMiddleware } from './utils/logger.js';
-
-// Initialize app
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Connect DB
+// Connect to Database
 connectDB();
 
-// ------------------- MIDDLEWARE -------------------
-app.use(helmet());
-
-// Use your custom CORS if needed, else default
-app.use(cors());
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(corsMiddleware);
+app.use(rateLimiter);
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
 
-app.use(compression());
-app.use(loggerMiddleware);
-
-// Logging
-if (config.env === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// Rate limiting
-app.use('/api/', apiLimiter);
-
-// ------------------- ROUTES -------------------
-
-// Root
-app.get('/', (req, res) => {
-  res.json({
-    status: 'success',
-    message: 'DSA Visualizer API is running!',
-    version: '1.0.0',
-    endpoints: {
-      main: '/api',
-      search: '/api/search/:algorithm',
-    },
+// Health check (root level)
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'success', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Main routes
+// API Routes
 app.use('/api', routes);
 
-// ------------------- SEARCH ENDPOINT -------------------
-app.post('/api/search/:algorithm', (req, res) => {
-  try {
-    const { algorithm } = req.params;
-    const { array, target } = req.body;
-
-    let result;
-
-    switch (algorithm.toLowerCase()) {
-      case 'linear':
-        result = linearSearch(array, target);
-        break;
-      case 'binary':
-        result = binarySearch(array, target);
-        break;
-      case 'jump':
-        result = jumpSearch(array, target);
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid search algorithm' });
-    }
-
-    res.json({ steps: result });
-  } catch (error) {
-    logger.error('Search error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ------------------- 404 -------------------
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({
-    error: 'Route not found',
-    path: req.url,
+    success: false,
+    message: `Route not found: ${req.method} ${req.path}`
   });
 });
 
-// ------------------- ERROR HANDLER -------------------
+// Error Handler (must be last)
 app.use(errorHandler);
 
-// ------------------- START SERVER -------------------
-const PORT = config.port || process.env.PORT || 3000;
-
+// Start server
 app.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║   DSA VISUALIZER API                  ║
-║   Environment: ${config.env.padEnd(20)}║
-║   Port: ${PORT.toString().padEnd(29)}║
-║   Status: RUNNING ✅                  ║
-╚════════════════════════════════════════╝
-  `);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-// ------------------- UNHANDLED ERRORS -------------------
+// Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Rejection:', err);
   process.exit(1);
+});
+
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });
