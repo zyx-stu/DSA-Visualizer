@@ -1,15 +1,31 @@
-export const successResponse = (res, data = null, message = 'Success', statusCode = 200) => {
+/**
+ * Success response helper
+ */
+const successResponse = (res, data, message = 'Success', statusCode = 200) => {
   return res.status(statusCode).json({
-    status: 'success',
+    success: true,
     message,
-    data,
+    data
   });
 };
 
-export const errorResponse = (res, message = 'Error', statusCode = 500, errors = null) => {
-  return res.status(statusCode).json({
-    status: 'error',
-    message,
-    ...(errors && { errors }),
-  });
+/**
+ * Error response helper
+ */
+const errorResponse = (res, message = 'Error', statusCode = 500, errors = null) => {
+  const response = {
+    success: false,
+    message
+  };
+
+  if (errors) {
+    response.errors = errors;
+  }
+
+  return res.status(statusCode).json(response);
+};
+
+module.exports = {
+  successResponse,
+  errorResponse
 };

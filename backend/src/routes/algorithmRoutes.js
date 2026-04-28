@@ -1,21 +1,30 @@
-import express from 'express';
-import algorithmController from '../controllers/algorithmController.js';
-import { validateAlgorithm } from '../middleware/validator.js';
-
+const express = require('express');
 const router = express.Router();
+const algorithmController = require('../controllers/algorithmController');
+const { validateQuery } = require('../middleware/validator');
 
-// Public routes
-router.get('/', algorithmController.getAll);
-router.get('/stats', algorithmController.getStats);
-router.get('/categories', algorithmController.getCategories);
+// GET /api/algorithms - Get all algorithms (with filters)
+router.get('/', algorithmController.getAllAlgorithms);
+
+// GET /api/algorithms/popular - Get popular algorithms
 router.get('/popular', algorithmController.getPopular);
-router.get('/slug/:slug', algorithmController.getBySlug);
-router.get('/:id', algorithmController.getById);
-router.post('/:id/like', algorithmController.like);
 
-// Admin routes (add authentication middleware in production)
-router.post('/', validateAlgorithm, algorithmController.create);
-router.put('/:id', validateAlgorithm, algorithmController.update);
-router.delete('/:id', algorithmController.delete);
+// GET /api/algorithms/stats - Get statistics
+router.get('/stats', algorithmController.getStats);
 
-export default router;
+// GET /api/algorithms/categories - Get all categories
+router.get('/categories', algorithmController.getCategories);
+
+// GET /api/algorithms/search - Search algorithms
+router.get('/search', algorithmController.searchAlgorithms);
+
+// GET /api/algorithms/:slug - Get single algorithm
+router.get('/:slug', algorithmController.getAlgorithmBySlug);
+
+// POST /api/algorithms/:slug/view - Increment views
+router.post('/:slug/view', algorithmController.incrementViews);
+
+// POST /api/algorithms/:slug/like - Toggle like
+router.post('/:slug/like', algorithmController.toggleLike);
+
+module.exports = router;
