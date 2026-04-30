@@ -93,4 +93,4 @@ DSA-Visualizer/
 
 ## License
 
-MIT © 2024 [Shivaraj](https://github.com/zyx-stu)
+MIT © 2024 [Shiva Raj(Darling)](https://github.com/zyx-stu)
