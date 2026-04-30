@@ -70,19 +70,30 @@ const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-dark-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-gray-600 text-sm">
-            © {new Date().getFullYear()} DSA Visualizer. All rights reserved.
+            © {new Date().getFullYear()} <span className="text-gray-500">DSA Visualizer</span> — Built by{' '}
+            <a
+              href="https://github.com/zyx-stu"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              Shivaraj
+            </a>
+            . All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/zyx-stu/DSA-Visualizer"
               target="_blank"
               rel="noreferrer"
-              className="text-gray-600 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-1.5 text-gray-600 hover:text-gray-300 transition-colors text-sm"
             >
-              <FiGithub size={18} />
+              <FiGithub size={15} />
+              Source Code
             </a>
+            <span className="text-gray-700">•</span>
             <p className="text-gray-600 text-sm flex items-center gap-1">
-              Made with <FiHeart className="text-red-500 mx-1" size={13} /> for developers
+              Made with <FiHeart className="text-red-500 mx-1" size={12} /> in India
             </p>
           </div>
         </div>
